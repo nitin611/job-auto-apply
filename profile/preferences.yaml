@@ -1,0 +1,74 @@
+identity:
+  full_name: ""
+  email: "jhanitin906@gmail.com"
+  phone: ""
+  location_current: ""
+  work_authorization: ""
+  linkedin_url: ""
+  github_url: ""
+  portfolio_url: ""
+
+targeting:
+  titles: []
+  seniority: ["mid", "senior"]
+  experience_years_min: 2
+  experience_years_max: 8
+  locations: []
+  work_modes: ["remote", "hybrid"]
+  ctc_min_inr: 0
+  ctc_target_inr: 0
+
+filters:
+  must_have_keywords: []
+  nice_to_have_keywords: []
+  blacklist_keywords: ["unpaid", "commission only"]
+  blacklist_companies: []
+  exclude_if_posted_more_than_days: 21
+
+scoring:
+  min_score_to_qualify: 7
+  auto_apply_threshold: 7
+
+limits:
+  max_applications_per_day_total: 15
+  max_applications_per_source_per_day:
+    greenhouse: 8
+    lever: 8
+
+sources:
+  greenhouse:
+    enabled: true
+    company_slugs:
+      - airbnb
+      - stripe
+      - figma
+      - shopify
+      - notion
+      - vercel
+      - discord
+      - coinbase
+      - robinhood
+      - reddit
+      - gitlab
+      - cloudflare
+      - datadog
+      - dropbox
+      - instacart
+      - doordash
+      - lyft
+      - asana
+      - mongodb
+      - elastic
+  lever:
+    enabled: true
+    company_slugs:
+      - netflix
+      - shopify
+      - kraken
+      - twitch
+      - ramp
+      - mercury
+      - brex
+      - rippling
+      - retool
+      - posthog

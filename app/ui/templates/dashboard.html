@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block heading %}Dashboard{% endblock %}
+{% block content %}
+
+{% if stats.dry_run %}
+<div class="bg-amber-900/40 border border-amber-700 text-amber-200 px-4 py-3 rounded mb-4 text-sm">
+  <strong>DRY RUN mode</strong> — applications will be simulated, not submitted. Set <code>DRY_RUN=false</code> in <code>.env</code> to live-fire.
+</div>
+{% endif %}
+
+<div class="grid grid-cols-4 gap-4 mb-6">
+  {% for label, value, color in [
+    ('Today applied', stats.applied_today, 'text-emerald-400'),
+    ('Queue waiting', stats.queue_waiting, 'text-blue-400'),
+    ('Needs human', stats.needs_human, 'text-amber-400'),
+    ('Failed (24h)', stats.failed_24h, 'text-red-400')] %}
+  <div class="bg-slate-900 border border-slate-800 rounded p-4">
+    <div class="text-xs text-slate-500 uppercase tracking-wide">{{ label }}</div>
+    <div class="text-3xl font-bold {{ color }} mt-2">{{ value }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid grid-cols-3 gap-4">
+  <div class="col-span-2 bg-slate-900 border border-slate-800 rounded p-4">
+    <h2 class="text-lg font-semibold mb-3">Recent activity</h2>
+    {% if recent %}
+    <ul class="divide-y divide-slate-800">
+      {% for r in recent %}
+      <li class="py-2 flex items-center gap-3 text-sm">
+        <span class="text-slate-500 w-12">{{ r.ts }}</span>
+        {% set color = 'bg-emerald-700' if r.outcome == 'submitted' else ('bg-blue-700' if r.outcome == 'dry_run' else ('bg-amber-700' if r.outcome == 'needs_human' else 'bg-red-700')) %}
+        <span class="pill {{ color }} text-white">{{ r.outcome }}</span>
+        <a href="/job/{{ r.job_id }}" class="flex-1 hover:text-blue-300">
+          <span class="font-medium">{{ r.title }}</span>
+          <span class="text-slate-400">@ {{ r.company }}</span>
+        </a>
+        <span class="text-slate-500">{{ r.source }}</span>
+        {% if r.score %}<span class="text-xs text-slate-400">score {{ '%.1f' | format(r.score) }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-slate-500 text-sm">No activity yet. Click <strong>Run pipeline now</strong> above to start.</p>
+    {% endif %}
+  </div>
+
+  <div class="bg-slate-900 border border-slate-800 rounded p-4">
+    <h2 class="text-lg font-semibold mb-3">Recent runs</h2>
+    {% if runs %}
+    <ul class="space-y-2 text-sm">
+      {% for r in runs %}
+      <li class="flex justify-between items-center">
+        <span>{{ r.kind }} <span class="text-slate-500">· {{ r.started_at }}</span></span>
+        {% set c = 'bg-emerald-700' if r.status == 'success' else ('bg-blue-700' if r.status == 'running' else 'bg-red-700') %}
+        <span class="pill {{ c }} text-white">{{ r.status }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-slate-500 text-sm">No runs yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

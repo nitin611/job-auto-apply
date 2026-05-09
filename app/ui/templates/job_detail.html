@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block heading %}{{ job.title }} @ {{ job.company }}{% endblock %}
+{% block content %}
+<div class="bg-slate-900 border border-slate-800 rounded p-4 mb-4">
+  <div class="flex justify-between text-sm text-slate-400">
+    <div>{{ job.source }} · {{ job.location or 'Unknown' }} · {{ job.work_mode or '' }}</div>
+    <div>Status: <span class="pill bg-slate-700">{{ job.status }}</span> Score: {{ '%.1f' | format(job.score) if job.score else '-' }}</div>
+  </div>
+  <a href="{{ job.url }}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm">{{ job.url }} ↗</a>
+
+  {% if job.rationale %}
+  <h3 class="font-semibold mt-4">Score rationale</h3>
+  <p class="text-sm text-slate-300">{{ job.rationale }}</p>
+  {% endif %}
+
+  {% if job.highlights %}
+  <h3 class="font-semibold mt-4">Match highlights</h3>
+  <ul class="text-sm text-emerald-400 list-disc list-inside">{% for h in job.highlights %}<li>{{ h }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  {% if job.red_flags %}
+  <h3 class="font-semibold mt-4">Red flags</h3>
+  <ul class="text-sm text-red-400 list-disc list-inside">{% for f in job.red_flags %}<li>{{ f }}</li>{% endfor %}</ul>
+  {% endif %}
+</div>
+
+{% if job.cover_letter %}
+<div class="bg-slate-900 border border-slate-800 rounded p-4 mb-4">
+  <h3 class="font-semibold mb-2">Cover letter</h3>
+  <pre class="whitespace-pre-wrap text-sm text-slate-300">{{ job.cover_letter }}</pre>
+</div>
+{% endif %}
+
+<div class="bg-slate-900 border border-slate-800 rounded p-4 mb-4">
+  <h3 class="font-semibold mb-2">Job description</h3>
+  <pre class="whitespace-pre-wrap text-sm text-slate-300 max-h-96 overflow-auto">{{ job.description }}</pre>
+</div>
+
+{% if applications %}
+<div class="bg-slate-900 border border-slate-800 rounded p-4">
+  <h3 class="font-semibold mb-2">Application attempts</h3>
+  <ul class="divide-y divide-slate-800 text-sm">
+    {% for a in applications %}
+    <li class="py-2">
+      <div class="flex justify-between">
+        <span>{{ a.started_at }}</span>
+        <span class="pill bg-slate-700">{{ a.outcome }}</span>
+      </div>
+      {% if a.failure_reason %}<div class="text-red-400 text-xs mt-1">{{ a.failure_reason }}</div>{% endif %}
+      {% if a.screenshot_path %}<div class="text-xs text-slate-500 mt-1">Screenshot: {{ a.screenshot_path }}</div>{% endif %}
+      {% if a.confirmation %}<div class="text-emerald-400 text-xs mt-1">{{ a.confirmation[:200] }}…</div>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

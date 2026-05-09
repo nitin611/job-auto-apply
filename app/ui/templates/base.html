@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Auto Job Apply</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js" defer></script>
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .pill { @apply text-xs font-medium px-2 py-0.5 rounded-full; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen">
+<div class="flex">
+  <aside class="w-56 bg-slate-900 min-h-screen p-4 border-r border-slate-800">
+    <div class="text-xl font-bold mb-6 text-blue-400">⚙ AutoApply</div>
+    <nav class="flex flex-col gap-1 text-sm">
+      {% set items = [('/', 'Dashboard', 'dashboard'), ('/queue', 'Queue', 'queue'), ('/jobs', 'All jobs', 'jobs'), ('/profile', 'Profile', 'profile'), ('/runs', 'Runs', 'runs')] %}
+      {% for href, label, key in items %}
+      <a href="{{ href }}" class="px-3 py-2 rounded {% if page == key %}bg-blue-600 text-white{% else %}hover:bg-slate-800{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <div class="mt-8 text-xs text-slate-500">
+      <div>v0.1</div>
+    </div>
+  </aside>
+
+  <main class="flex-1 p-6">
+    <header class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-semibold">{% block heading %}{% endblock %}</h1>
+      <div class="flex items-center gap-3">
+        <span id="run-status" class="pill bg-slate-800 text-slate-400">idle</span>
+        <button hx-post="/api/pipeline/run" hx-swap="none"
+                class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm font-medium">
+          ▶ Run pipeline now
+        </button>
+        <button hx-post="/api/pipeline/search" hx-swap="none"
+                class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded text-sm">Search only</button>
+        <button hx-post="/api/pipeline/score" hx-swap="none"
+                class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded text-sm">Score only</button>
+        <button hx-post="/api/pipeline/apply" hx-swap="none"
+                class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded text-sm">Apply only</button>
+      </div>
+    </header>
+
+    <div id="toasts" class="fixed bottom-4 right-4 flex flex-col gap-2 z-50"></div>
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script>
+  const sse = new EventSource('/api/events');
+  const toastEl = document.getElementById('toasts');
+  const statusEl = document.getElementById('run-status');
+  function toast(text, color='bg-slate-800') {
+    const d = document.createElement('div');
+    d.className = `${color} text-white px-3 py-2 rounded shadow text-sm max-w-sm`;
+    d.textContent = text;
+    toastEl.appendChild(d);
+    setTimeout(() => d.remove(), 5000);
+  }
+  sse.onmessage = (e) => {
+    try {
+      const evt = JSON.parse(e.data);
+      if (evt.type === 'pipeline.start') { statusEl.textContent = 'running'; statusEl.className = 'pill bg-blue-600 text-white'; toast('Pipeline started' + (evt.dry_run ? ' (DRY RUN)' : ''), 'bg-blue-700'); }
+      else if (evt.type === 'pipeline.done') { statusEl.textContent = 'idle'; statusEl.className = 'pill bg-emerald-700 text-white'; toast('Pipeline finished', 'bg-emerald-700'); }
+      else if (evt.type === 'pipeline.error') { statusEl.textContent = 'error'; statusEl.className = 'pill bg-red-700 text-white'; toast('Pipeline error: ' + evt.error, 'bg-red-700'); }
+      else if (evt.type === 'apply.submitted') toast(`✓ Applied: ${evt.title} @ ${evt.company}`, 'bg-emerald-700');
+      else if (evt.type === 'apply.dry_run') toast(`(dry-run) ${evt.title} @ ${evt.company}`, 'bg-blue-700');
+      else if (evt.type === 'apply.failed') toast(`✗ Apply failed: ${evt.reason}`, 'bg-red-700');
+      else if (evt.type === 'apply.needs_human') toast(`⚠ Needs human: ${evt.reason}`, 'bg-amber-700');
+      else if (evt.type === 'job.qualified') toast(`★ Qualified (${evt.score}): ${evt.title} @ ${evt.company}`);
+      else if (evt.type === 'search.source_done') toast(`${evt.source}: +${evt.new} new (${evt.discovered} discovered)`);
+      else if (evt.type === 'search.source_failed') toast(`${evt.source} search failed: ${evt.error}`, 'bg-red-700');
+    } catch (err) {}
+  };
+</script>
+</body>
+</html>

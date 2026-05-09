@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block heading %}All jobs{% endblock %}
+{% block content %}
+<div class="mb-3 flex gap-2 text-sm">
+  {% for s in ['', 'new', 'qualified', 'approved', 'applied', 'needs_human', 'failed', 'skipped'] %}
+  <a href="/jobs{% if s %}?status={{ s }}{% endif %}"
+     class="px-3 py-1 rounded {% if filter_status == s or (not filter_status and not s) %}bg-blue-600 text-white{% else %}bg-slate-800 text-slate-300 hover:bg-slate-700{% endif %}">
+    {{ s or 'all' }}
+  </a>
+  {% endfor %}
+</div>
+
+<table class="w-full text-sm bg-slate-900 border border-slate-800 rounded overflow-hidden">
+  <thead class="bg-slate-800 text-slate-400 text-xs uppercase">
+    <tr>
+      <th class="text-left p-2">Status</th>
+      <th class="text-left p-2">Score</th>
+      <th class="text-left p-2">Title</th>
+      <th class="text-left p-2">Company</th>
+      <th class="text-left p-2">Source</th>
+      <th class="text-left p-2">Location</th>
+      <th class="text-left p-2">Discovered</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-slate-800">
+    {% for j in jobs %}
+    <tr class="hover:bg-slate-800/50">
+      <td class="p-2"><span class="pill bg-slate-700">{{ j.status }}</span></td>
+      <td class="p-2">{{ '%.1f' | format(j.score) if j.score else '-' }}</td>
+      <td class="p-2"><a href="/job/{{ j.id }}" class="hover:text-blue-300">{{ j.title }}</a></td>
+      <td class="p-2">{{ j.company }}</td>
+      <td class="p-2 text-slate-400">{{ j.source }}</td>
+      <td class="p-2 text-slate-400">{{ j.location or '' }}</td>
+      <td class="p-2 text-slate-500 text-xs">{{ j.discovered_at }}</td>
+      <td class="p-2"><a href="{{ j.url }}" target="_blank" class="text-blue-400 hover:text-blue-300">↗</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="p-6 text-center text-slate-500">No jobs.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

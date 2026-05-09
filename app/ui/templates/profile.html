@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block heading %}Profile{% endblock %}
+{% block content %}
+<div x-data="profileForm()" class="space-y-6">
+
+  <!-- Resume -->
+  <section class="bg-slate-900 border border-slate-800 rounded p-4">
+    <h2 class="text-lg font-semibold mb-3">Resume</h2>
+    <div class="text-sm mb-2">
+      PDF: {% if pdf_present %}<span class="text-emerald-400">present</span>{% else %}<span class="text-amber-400">missing — required for apply</span>{% endif %}
+    </div>
+    <form hx-encoding="multipart/form-data" hx-post="/api/profile/resume/upload" hx-swap="none" class="mb-3">
+      <input type="file" name="file" accept=".pdf,.md,.txt" class="text-sm" required>
+      <button class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-sm ml-2">Upload</button>
+    </form>
+    <label class="text-xs text-slate-400 block mb-1">resume.md (used for LLM scoring)</label>
+    <textarea x-model="resume_md" rows="10" class="w-full bg-slate-800 text-slate-200 p-2 rounded text-sm font-mono"></textarea>
+    <label class="text-xs text-slate-400 block mt-3 mb-1">skills.md</label>
+    <textarea x-model="skills_md" rows="4" class="w-full bg-slate-800 text-slate-200 p-2 rounded text-sm font-mono"></textarea>
+    <button @click="saveResume()" class="mt-2 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-sm">Save resume.md / skills.md</button>
+  </section>
+
+  <!-- Identity -->
+  <section class="bg-slate-900 border border-slate-800 rounded p-4">
+    <h2 class="text-lg font-semibold mb-3">Identity</h2>
+    <div class="grid grid-cols-2 gap-3">
+      <template x-for="field in ['full_name','email','phone','location_current','work_authorization','linkedin_url','github_url','portfolio_url']" :key="field">
+        <label class="block">
+          <span class="text-xs text-slate-400" x-text="field"></span>
+          <input class="w-full bg-slate-800 text-slate-200 p-2 rounded text-sm" :value="prefs.identity[field] || ''" @input="prefs.identity[field] = $event.target.value">
+        </label>
+      </template>
+    </div>
+  </section>
+
+  <!-- Targeting -->
+  <section class="bg-slate-900 border border-slate-800 rounded p-4">
+    <h2 class="text-lg font-semibold mb-3">Targeting</h2>
+    <div class="grid grid-cols-2 gap-3">
+      <label class="block col-span-2"><span class="text-xs text-slate-400">titles (comma-separated)</span>
+        <input class="w-full bg-slate-800 p-2 rounded text-sm" :value="(prefs.targeting.titles||[]).join(', ')" @input="prefs.targeting.titles = splitCsv($event.target.value)"></label>
+      <label class="block"><span class="text-xs text-slate-400">experience min (years)</span>
+        <input type="number" class="w-full bg-slate-800 p-2 rounded text-sm" x-model.number="prefs.targeting.experience_years_min"></label>
+      <label class="block"><span class="text-xs text-slate-400">experience max (years)</span>
+        <input type="number" class="w-full bg-slate-800 p-2 rounded text-sm" x-model.number="prefs.targeting.experience_years_max"></label>
+      <label class="block"><span class="text-xs text-slate-400">CTC min INR</span>
+        <input type="number" class="w-full bg-slate-800 p-2 rounded text-sm" x-model.number="prefs.targeting.ctc_min_inr"></label>
+      <label class="block"><span class="text-xs text-slate-400">CTC target INR</span>
+        <input type="number" class="w-full bg-slate-800 p-2 rounded text-sm" x-model.number="prefs.targeting.ctc_target_inr"></label>
+      <label class="block col-span-2"><span class="text-xs text-slate-400">locations (comma-separated)</span>
+        <input class="w-full bg-slate-800 p-2 rounded text-sm" :value="(prefs.targeting.locations||[]).join(', ')" @input="prefs.targeting.locations = splitCsv($event.target.value)"></label>
+      <label class="block col-span-2"><span class="text-xs text-slate-400">work_modes (comma-separated: remote, hybrid, onsite)</span>
+        <input class="w-full bg-slate-800 p-2 rounded text-sm" :value="(prefs.targeting.work_modes||[]).join(', ')" @input="prefs.targeting.work_modes = splitCsv($event.target.value)"></label>
+    </div>
+  </section>
+
+  <!-- Filters -->
+  <section class="bg-slate-900 border border-slate-800 rounded p-4">
+    <h2 class="text-lg font-semibold mb-3">Filters</h2>
+    <div class="grid grid-cols-2 gap-3">
+      <label class="block col-span-2"><span class="text-xs text-slate-400">must-have keywords</span>
+        <input class="w-full bg-slate-800 p-2 rounded text-sm" :value="(prefs.filters.must_have_keywords||[]).join(', ')" @input="prefs.filters.must_have_keywords = splitCsv($event.target.value)"></label>
+      <label class="block col-span-2"><span class="text-xs text-slate-400">nice-to-have keywords</span>
+        <input class="w-full bg-slate-800 p-2 rounded text-sm" :value="(prefs.filters.nice_to_have_keywords||[]).join(', ')" @input="prefs.filters.nice_to_have_keywords = splitCsv($event.target.value)"></label>
+      <label class="block col-span-2"><span class="text-xs text-slate-400">blacklist keywords</span>
+        <input class="w-full bg-slate-800 p-2 rounded text-sm" :value="(prefs.filters.blacklist_keywords||[]).join(', ')" @input="prefs.filters.blacklist_keywords = splitCsv($event.target.value)"></label>
+      <label class="block col-span-2"><span class="text-xs text-slate-400">blacklist companies</span>
+        <input class="w-full bg-slate-800 p-2 rounded text-sm" :value="(prefs.filters.blacklist_companies||[]).join(', ')" @input="prefs.filters.blacklist_companies = splitCsv($event.target.value)"></label>
+      <label class="block"><span class="text-xs text-slate-400">exclude posts older than (days)</span>
+        <input type="number" class="w-full bg-slate-800 p-2 rounded text-sm" x-model.number="prefs.filters.exclude_if_posted_more_than_days"></label>
+    </div>
+  </section>
+
+  <!-- Scoring -->
+  <section class="bg-slate-900 border border-slate-800 rounded p-4">
+    <h2 class="text-lg font-semibold mb-3">Scoring &amp; auto-apply</h2>
+    <div class="grid grid-cols-2 gap-3">
+      <label class="block"><span class="text-xs text-slate-400">min score to qualify (0-10)</span>
+        <input type="number" step="0.5" class="w-full bg-slate-800 p-2 rounded text-sm" x-model.number="prefs.scoring.min_score_to_qualify"></label>
+      <label class="block"><span class="text-xs text-slate-400">auto-apply if score ≥ (leave blank for manual approval)</span>
+        <input type="number" step="0.5" class="w-full bg-slate-800 p-2 rounded text-sm" :value="prefs.scoring.auto_apply_threshold ?? ''" @input="prefs.scoring.auto_apply_threshold = $event.target.value === '' ? null : Number($event.target.value)"></label>
+    </div>
+  </section>
+
+  <!-- Limits -->
+  <section class="bg-slate-900 border border-slate-800 rounded p-4">
+    <h2 class="text-lg font-semibold mb-3">Daily limits</h2>
+    <div class="grid grid-cols-2 gap-3">
+      <label class="block"><span class="text-xs text-slate-400">total per day</span>
+        <input type="number" class="w-full bg-slate-800 p-2 rounded text-sm" x-model.number="prefs.limits.max_applications_per_day_total"></label>
+    </div>
+  </section>
+
+  <!-- Sources -->
+  <section class="bg-slate-900 border border-slate-800 rounded p-4">
+    <h2 class="text-lg font-semibold mb-3">Sources</h2>
+    <template x-for="src in ['greenhouse', 'lever']" :key="src">
+      <div class="mb-3">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" :checked="prefs.sources[src]?.enabled" @change="prefs.sources[src] = prefs.sources[src] || {}; prefs.sources[src].enabled = $event.target.checked">
+          <span class="capitalize" x-text="src"></span>
+        </label>
+        <label class="block mt-1"><span class="text-xs text-slate-400">company slugs (comma-separated)</span>
+          <input class="w-full bg-slate-800 p-2 rounded text-sm" :value="((prefs.sources[src]||{}).company_slugs||[]).join(', ')" @input="prefs.sources[src] = prefs.sources[src]||{}; prefs.sources[src].company_slugs = splitCsv($event.target.value)"></label>
+      </div>
+    </template>
+  </section>
+
+  <!-- Screening answers -->
+  <section class="bg-slate-900 border border-slate-800 rounded p-4">
+    <h2 class="text-lg font-semibold mb-3">Screening answers</h2>
+    <p class="text-xs text-slate-500 mb-2">Canonical answers used during apply. Edit values; LLM uses these for matching screening questions.</p>
+    <div class="grid grid-cols-2 gap-3">
+      <template x-for="key in Object.keys(answers)" :key="key">
+        <label class="block">
+          <span class="text-xs text-slate-400" x-text="key"></span>
+          <input class="w-full bg-slate-800 p-2 rounded text-sm" :value="answers[key]" @input="answers[key] = $event.target.value">
+        </label>
+      </template>
+    </div>
+  </section>
+
+  <div class="sticky bottom-0 bg-slate-950/80 backdrop-blur py-3 flex gap-3 border-t border-slate-800">
+    <button @click="saveAll()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded font-medium">💾 Save everything</button>
+    <span x-text="status" class="self-center text-sm text-slate-400"></span>
+  </div>
+</div>
+
+<script>
+function profileForm() {
+  return {
+    prefs: {{ prefs | tojson }},
+    answers: {{ answers | tojson }},
+    resume_md: {{ resume_md | tojson }},
+    skills_md: {{ skills_md | tojson }},
+    status: '',
+    splitCsv(v) { return v.split(',').map(s => s.trim()).filter(Boolean); },
+    async saveAll() {
+      this.status = 'saving…';
+      // Ensure required nested objects exist
+      this.prefs.identity = this.prefs.identity || {};
+      this.prefs.targeting = this.prefs.targeting || {};
+      this.prefs.filters = this.prefs.filters || {};
+      this.prefs.scoring = this.prefs.scoring || {};
+      this.prefs.limits = this.prefs.limits || {};
+      this.prefs.sources = this.prefs.sources || {};
+      await fetch('/api/profile/preferences', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(this.prefs)});
+      await fetch('/api/profile/answers', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(this.answers)});
+      await fetch('/api/profile/resume', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({markdown: this.resume_md, skills: this.skills_md})});
+      this.status = 'saved ✓';
+      setTimeout(() => this.status = '', 2000);
+    },
+    async saveResume() {
+      await fetch('/api/profile/resume', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({markdown: this.resume_md, skills: this.skills_md})});
+      this.status = 'resume saved'; setTimeout(() => this.status = '', 2000);
+    }
+  };
+}
+</script>
+{% endblock %}

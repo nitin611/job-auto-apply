@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block heading %}Runs{% endblock %}
+{% block content %}
+<div class="space-y-2">
+  {% for r in runs %}
+  <details class="bg-slate-900 border border-slate-800 rounded p-3">
+    <summary class="cursor-pointer flex items-center justify-between">
+      <span>
+        <span class="font-medium">{{ r.kind }}</span>
+        <span class="text-slate-500 text-sm ml-2">{{ r.started_at }}</span>
+        {% if r.finished_at %}<span class="text-slate-600 text-xs ml-1">→ {{ r.finished_at }}</span>{% endif %}
+      </span>
+      {% set c = 'bg-emerald-700' if r.status == 'success' else ('bg-blue-700' if r.status == 'running' else 'bg-red-700') %}
+      <span class="pill {{ c }} text-white">{{ r.status }}</span>
+    </summary>
+    <pre class="text-xs text-slate-400 mt-2 whitespace-pre-wrap">{{ r.stats | tojson(indent=2) }}</pre>
+    {% if r.error %}<pre class="text-xs text-red-400 mt-2 whitespace-pre-wrap">{{ r.error }}</pre>{% endif %}
+  </details>
+  {% else %}
+  <p class="text-slate-500 text-sm">No runs yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}
