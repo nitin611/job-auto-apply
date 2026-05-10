@@ -9,6 +9,8 @@ class Settings(BaseSettings):
 
     claude_transport: str = "claude_cli"
     claude_bin: str = "claude"
+    gemini_bin: str = "gemini"
+    llm_provider: str = "claude_cli"  # claude_cli | gemini_cli
     dry_run: bool = True
 
     db_path: str = "./data/jobs.db"

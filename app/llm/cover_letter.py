@@ -1,4 +1,4 @@
-from app.llm.client import call_claude
+from app.llm.client import call_llm
 from app.services.profile import build_system_prompt
 from app.config import settings
 
@@ -27,5 +27,5 @@ async def generate_cover_letter(title: str, company: str, description: str) -> s
         company=company or "",
         description=(description or "")[:4000],
     )
-    envelope = await call_claude(prompt, system_prompt_path=sys_path, timeout=90.0, model="sonnet")
+    envelope = await call_llm(prompt, system_prompt_path=sys_path, timeout=90.0, model="sonnet")
     return (envelope.get("result") or "").strip()

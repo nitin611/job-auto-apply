@@ -1,4 +1,4 @@
-from app.llm.client import call_and_parse, call_claude, extract_json, ClaudeError
+from app.llm.client import call_and_parse, call_claude, call_llm, extract_json, ClaudeError
 from app.schemas import ScoreResult
 from app.services.profile import build_system_prompt
 from app.config import settings
@@ -99,7 +99,7 @@ async def score_jobs_batch(items: list[dict]) -> dict[int, ScoreResult]:
         )
     prompt = SCORING_PROMPT_BATCH.format(jobs_block="\n\n".join(blocks))
 
-    envelope = await call_claude(prompt, system_prompt_path=sys_path, timeout=180.0, model="haiku")
+    envelope = await call_llm(prompt, system_prompt_path=sys_path, timeout=180.0, model="haiku")
     text = envelope.get("result", "") or ""
     try:
         data = extract_json(text)

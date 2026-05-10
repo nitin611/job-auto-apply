@@ -87,16 +87,40 @@ def extract_json(text: str) -> dict:
         raise ClaudeError(f"JSON parse failed: {e}; candidate={candidate[:300]}")
 
 
+def _active_provider() -> str:
+    """Return the currently configured LLM provider (reads prefs at call time)."""
+    try:
+        from app.services.profile import load_preferences
+        prefs = load_preferences()
+        return prefs.get("llm", {}).get("provider") or settings.llm_provider
+    except Exception:
+        return settings.llm_provider
+
+
+async def call_llm(
+    prompt: str,
+    system_prompt_path: Path | None = None,
+    timeout: float = 90.0,
+    model: str = "haiku",
+) -> dict:
+    """Unified LLM call — routes to Claude CLI or Gemini CLI based on preferences."""
+    provider = _active_provider()
+    if provider == "gemini_cli":
+        from app.llm.gemini_client import call_gemini
+        return await call_gemini(prompt, system_prompt_path=system_prompt_path, timeout=timeout, model=model)
+    return await call_claude(prompt, system_prompt_path=system_prompt_path, timeout=timeout, model=model)
+
+
 async def call_and_parse(prompt: str, system_prompt_path: Path | None = None, retries: int = 1) -> dict:
     last_err: Exception | None = None
     for attempt in range(retries + 1):
         try:
-            envelope = await call_claude(prompt, system_prompt_path=system_prompt_path)
+            envelope = await call_llm(prompt, system_prompt_path=system_prompt_path)
             result_text = envelope.get("result", "") or envelope.get("text", "")
             return extract_json(result_text)
-        except ClaudeError as e:
+        except (ClaudeError, Exception) as e:
             last_err = e
-            log.warning("claude.parse_failed", attempt=attempt, error=str(e))
+            log.warning("llm.parse_failed", attempt=attempt, error=str(e))
             await asyncio.sleep(1.0)
     raise last_err or ClaudeError("unknown failure")
 

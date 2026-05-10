@@ -53,8 +53,17 @@ async def pipeline_status():
 
 @router.get("/pipeline/health")
 async def health():
-    ok, msg = await health_check()
-    return {"claude_ok": ok, "claude_message": msg}
+    from app.llm.gemini_client import health_check as gemini_health_check
+    from app.llm.client import _active_provider
+    claude_ok, claude_msg = await health_check()
+    gemini_ok, gemini_msg = await gemini_health_check()
+    return {
+        "claude_ok": claude_ok,
+        "claude_message": claude_msg,
+        "gemini_ok": gemini_ok,
+        "gemini_message": gemini_msg,
+        "active_provider": _active_provider(),
+    }
 
 
 @router.post("/pipeline/export")
